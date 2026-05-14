@@ -1,0 +1,230 @@
+<!DOCTYPE HTML>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8"> <!--esto es la codificacion de caracteres, utf 8 soporta la ñ y tildes, etc-->
+        <title>Gestion de Estudiantes</title> <!--titulo que aparece en la pestaña de la pagina-->
+    </head>
+    <body>
+        <h1>Gestion de Estudiantes</h1> <!--titulo principal visible para la pagina-->
+        
+        <h2>Agregar Estudiantes</h2> <!--formulario para agregar estudiantes-->
+        <!--//placeholder muestr el nombre en gris hasta que el usuario typee-->
+
+        <input type="text" name="firstName" placeholder="Nombre"><br> 
+        <input type="text" name="lastName" placeholder="Apellido"><br>
+        <input type="text" name="email" placeholder="Email"><br>
+        <input type="text" name="gender" placeholder="Genero"><br>
+        <input type="text" name="lastConnectedAddress" placeholder="IP"><br>
+
+        <!--añado un boton que al clickear va a llamar a la funcion de cargarEstudiantes()-->
+        <button onclick="agregarEstudiante()">Agregar</button>
+
+        <h3> Editar Estudiantes</h3> <!-- formulario para editar estudiantes -->
+
+        <div id="formulario-editar" style="display:none"> <!-- hace que el elemento no se vea ni ocupe espacio en la pagina (arranca oculto) -->
+
+            <input type="hidden" name="idEditar"> <!-- input oculto para guardar el id del estudiante que se va a editar-->
+
+                <input type="text" name="firstNameEditar" placeholder="Nombre"><br>
+                <input type="text" name="lastNameEditar" placeholder="Apellido"><br>
+                <input type="text" name="emailEditar" placeholder="Email"><br>
+                <input type="text" name="genderEditar" placeholder="Genero"><br>
+                <input type="text" name="lastConnectedAddressEditar" placeholder="IP"><br>
+
+                <!-- boton que llama a la funcion para actualizarEstudiante()-->
+                <button onclick="actualizarEstudiante()">Guardar cambios</button>
+
+        </div>
+
+
+        <br><br>
+
+        <!--tabla donde muestro los estudiantes traidos de la API---->
+        <table border="1">
+            <!--encabezado de la tabla con los nombres de cada columna-->
+
+                <thead>
+                    <tr>
+                        <th>#</th> <!--numero de fila-->
+                        <th>First Name</th> <!--nombre-->
+                        <th>Last Name</th> <!--apellido-->
+                        <th>Email</th> <!--email-->
+                        <th>Gender</th> <!--genero-->
+                        <th>Last Connected Address</th> <!--ultima direccion ip-->
+                        <th>Acciones</th> <!--columna para accion eliminar-->
+                    </tr>
+                </thead>
+                        <!--este es el cuerpo de la tabla, aca se insertan las filas de manera dinamica usando js-->
+                <tbody id="tabla-body">
+
+                </tbody>
+        </table>
+        <script>
+            //URL de la API
+            const url = 'https://69f3920cbd2396bf53103574.mockapi.io/api/v1/student'
+
+            //funcion que trae todos los estudiantes de la API y los muestra en la tabla
+            function cargarEstudiantes(){
+                var request = new XMLHttpRequest() //creacion de solicitud HTTP
+            
+                //configuracion de la solicitu metodo GET y la url del endpoint
+                request.open('GET', url /*+ '/getAll'*/)
+
+                //esta funcion se ejecuta cada vez que cambia el estado de solicitud
+               
+                request.onreadystatechange= function(){
+                    if(request.readyState == 4 && request.status == 200){ //--readyState 4 significa que la solicitud termino y status 200 que fue exitosa-->
+                        
+                        var estudiantes = JSON.parse(request.responseText) //convertimos cada respuesta que viene del json a un array de objetos
+
+                        var tbody = document.getElementById('tabla-body')   //obtengo la referencia del tbody usando su id
+
+                        tbody.innerHTML= '' //lo vacio por si ya habia algo cargado anteriormente
+
+                        //recorro cada estudiante del arreglo, creamos fila para cada estudiante y finalmente la agregamos al tbody de la tabla
+                         estudiantes.forEach(function(estudiante, index){
+
+                            var fila ='<tr>' +
+                                '<td>' + (index + 1) + '</td>' +
+                                '<td>' + estudiante.firstName + '</td>' +
+                                '<td>' + estudiante.lastName  + '</td>' +
+                                '<td>' + estudiante.email     + '</td>' +
+                                '<td>' + estudiante.gender    + '</td>' +
+                                '<td>' + estudiante.lastConnectedAddress + '</td>'  +
+
+                                //Columna de acciones con el boton de elimnar, le pasamos el id del estudiante para eliminarlo
+                                
+                                    '<td>' + 
+                                        '<button onclick="prepararEdicion(\'' + estudiante.id + '\',\'' + estudiante.firstName + '\',\'' + estudiante.lastName + '\',\'' + estudiante.email + '\',\'' + estudiante.gender + '\',\'' + estudiante.lastConnectedAddress + '\')">Editar</button>' +
+                                        '<button onclick="eliminarEstudiante(\'' + estudiante.id + '\')">Eliminar</button>' +
+                                    '</td>'+
+
+                            '</tr>'
+
+                            //agrego la fila al tbody de la tabla
+                            tbody.innerHTML += fila
+                         })
+                    }
+                }
+                request.send() //envio solicitud a la API
+            }
+            //funcion para agregar nuevos estudiantes enviando los datos desde el formulario a la API
+            function agregarEstudiante(){
+                //leemos valores de cada input y buscandolos por su atributo name
+
+                var firstName= document.getElementsByName('firstName')[0].value
+                var lastName= document.getElementsByName('lastName')[0].value
+                var email= document.getElementsByName('email')[0].value
+                var gender= document.getElementsByName('gender')[0].value
+                var lastConnectedAddress= document.getElementsByName('lastConnectedAddress')[0].value
+
+                //creo un nuevo obj con los datos del nuevo estudiante
+                
+                var nuevoEstudiante = {
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    gender: gender,
+                    lastConnectedAddress: lastConnectedAddress
+                }
+
+                var request = new XMLHttpRequest() //creacion de solicitud http
+
+                //configuro la solicitud, metodo POST y la URL base
+                request.open('POST', url)
+
+                request.setRequestHeader('Content-Type', 'application/json') //esto le avisa a la API que vamos a enviar datos en formato JSON
+
+                request.onreadystatechange = function(){//se ejecuta cuando la solicitud termina
+                    if(request.readyState == 4 && request.status == 200){
+                        cargarEstudiantes() //si la solicitud termina y es exitosa carga un nuevo estudiante recargando la tabla
+                    }
+                }
+
+                //Envio la solicitud convirtiendo el obj en formato json
+                request.send(JSON.stringify(nuevoEstudiante))
+               
+            }
+            //llamo a la funcion para que cargue los estudiantes cuando abre la pagina
+            cargarEstudiantes()
+
+            //funcion para elimnar un estudiante por su id, se llama desde el boton elimanar de  cada fila
+            function eliminarEstudiante(id){
+                
+                //Creo la solicitud https
+                var request = new XMLHttpRequest()
+
+                //configuro la solicitud, metodo DELETE y la URL con el id del estudiante a eliminar
+                request.open('DELETE', url + '/'+ id)
+
+                //se ejecuta cada vez que cambia el estado de la solicitud
+                request.onreadystatechange = function(){
+                    if(request.readyState == 4 && request.status == 200){
+                        cargarEstudiantes() //si la solicitud termina y es exitosa recarga la tabla para mostrar los cambios
+                    }
+                }
+                //envio solicitud a la API para eliminar el estudiante
+                request.send()
+            }
+            //llamamos a la funcion para que cargue los estudiantes cuando abre la pagina
+            cargarEstudiantes()
+
+            //funcion que se llama al clickear Editar en una fila
+            //recibe los datos del estudiante y los carga en el formulario de edicion
+
+            function prepararEdicion(id, firstName, lastName, email, gender, LastconnectedAddress){
+
+                //mmuestro el formulario de edicion que estaba oculto
+                document.getElementById('formulario-editar').style.display = 'block'
+
+                //lenamos cada input del formulario con los datos del estudiante seleccionado
+                document.getElementsByName('idEditar')[0].value = id
+                document.getElementsByName('firstNameEditar')[0].value = firstName
+                document.getElementsByName('lastNameEditar')[0].value = lastName
+                document.getElementsByName('emailEditar')[0].value = email
+                document.getElementsByName('genderEditar')[0].value = gender
+                document.getElementsByName('lastConnectedAddressEditar')[0].value = LastconnectedAddress
+            }
+
+            //funcion que envia los datos actualizados del formulario de edicion a la API
+            function actualizarEstudiante(){
+
+                //leemos el id del estudiante que se esta editando desde el input oculto
+                var id = document.getElementsByName('idEditar')[0].value
+
+                //leemos los valores actualizados de cada input
+                var firstName = document.getElementsByName('firstNameEditar')[0].value
+                var lastName = document.getElementsByName('lastNameEditar')[0].value
+                var email = document.getElementsByName('emailEditar')[0].value
+                var gender = document.getElementsByName('genderEditar')[0].value
+                var lastConnectedAddress = document.getElementsByName('lastConnectedAddressEditar')[0].value
+
+                //creamos un objeto con los datos ya actualizados
+                var estudianteActualizado = {
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    gender: gender,
+                    lastConnectedAddress: lastConnectedAddress
+                }
+
+                var request = new XMLHttpRequest() //creacion de solicitud http
+
+                request.open ('PUT', url + '/' + id) //configuro la solicitud, metodo PUT y la URL con el id del estudiante a actualizar
+                request.setRequestHeader('Content-Type', 'application/json') //indico a la API que el formato de los datos es un JSON
+
+                request.onreadystatechange = function(){
+                    if(request.readyState == 4 && request.status == 200) {
+                        //oculto el formulario de edicion nuevamente
+                        document.getElementById('formulario-editar').style.display = 'none'
+
+                        //recargo la tabla para mostrar los cambios
+                        cargarEstudiantes()
+                    }
+                }
+                request.send(JSON.stringify(estudianteActualizado)) //envio la solicitud con los datos actualizados convertidos a formato JSON
+
+            }
+        </script>
+    </body>
+</html>
