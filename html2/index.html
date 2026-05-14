@@ -1,0 +1,240 @@
+<!DOCTYPE HTML>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8"> <!--esto es la codificacion de caracteres, utf 8 soporta la ñ y tildes, etc-->
+        <title>Gestion de Objetos</title> <!--titulo que aparece en la pestaña de la pagina-->
+    </head>
+    <body>
+        <h1>Gestion de Objetos</h1> <!--titulo principal visible para la pagina-->
+        
+        <h2>Agregar Objeto</h2> <!--formulario para agregar objetos-->
+
+        <!--los campos que maneja la API son name, color y price-->
+        <input type="text" name="name" placeholder="Nombre"><br>
+        <input type="text" name="color" placeholder="Color"><br>
+        <input type="text" name="price" placeholder="Precio"><br>
+
+        <!--boton que al clickear llama a la funcion agregarObjeto()-->
+        <button onclick="agregarObjeto()">Agregar</button>
+
+        <h3>Editar Objeto</h3> <!--formulario para editar objetos-->
+
+        <div id="formulario-editar" style="display:none"> <!--arranca oculto con display:none-->
+
+            <!--input oculto que guarda el id del objeto que se esta editando-->
+            <input type="hidden" name="idEditar">
+
+            <input type="text" name="nameEditar" placeholder="Nombre"><br>
+            <input type="text" name="colorEditar" placeholder="Color"><br>
+            <input type="text" name="priceEditar" placeholder="Precio"><br>
+
+            <!--boton que llama a la funcion actualizarObjeto()-->
+            <button onclick="actualizarObjeto()">Guardar cambios</button>
+        </div>
+
+        <br><br>
+
+        <!--tabla donde muestro los objetos traidos de la API-->
+        <table border="1">
+            <!--encabezado de la tabla con los nombres de cada columna-->
+            <thead>
+                <tr>
+                    <th>#</th>          <!--numero de fila-->
+                    <th>ID</th>         <!--id del objeto-->
+                    <th>Name</th>       <!--nombre-->
+                    <th>Color</th>      <!--color-->
+                    <th>Price</th>      <!--precio-->
+                    <th>Acciones</th>   <!--columna para los botones-->
+                </tr>
+            </thead>
+
+            <!--cuerpo de la tabla, las filas se insertan dinamicamente con JS-->
+            <tbody id="tabla-body">
+            </tbody>
+        </table>
+
+        <script>
+            //URL base de la nueva API del profesor
+            const url = 'https://api.restful-api.dev/objects'
+
+            //funcion que trae todos los objetos de la API y los muestra en la tabla
+            function cargarObjetos(){
+
+                var request = new XMLHttpRequest() //creacion de solicitud HTTP
+
+                //configuracion de la solicitud: metodo GET y la URL base
+                request.open('GET', url)
+
+                //esta funcion se ejecuta cada vez que cambia el estado de la solicitud
+                request.onreadystatechange = function(){
+
+                    //readyState 4 significa que la solicitud termino y status 200 que fue exitosa
+                    if(request.readyState == 4 && request.status == 200){
+
+                        //convertimos la respuesta que viene como texto JSON a un array de objetos
+                        var objetos = JSON.parse(request.responseText)
+
+                        //obtenemos la referencia al tbody de la tabla usando su id
+                        var tbody = document.getElementById('tabla-body')
+
+                        //vaciamos el tbody por si ya habia filas cargadas anteriormente
+                        tbody.innerHTML = ''
+
+                        //recorremos cada objeto del array
+                        objetos.forEach(function(objeto, index){
+
+                            //data puede ser null en algunos objetos, asi que lo verificamos antes de acceder
+                            var color = (objeto.data && objeto.data.color) ? objeto.data.color : ''
+                            var price = (objeto.data && objeto.data.price) ? objeto.data.price : ''
+
+                            //creamos una nueva fila por cada objeto
+                            var fila = '<tr>' +
+                                '<td>' + (index + 1) + '</td>' +        //numero de fila
+                                '<td>' + objeto.id + '</td>' +          //id del objeto
+                                '<td>' + objeto.name + '</td>' +        //nombre
+                                '<td>' + color + '</td>' +              //color (puede estar vacio)
+                                '<td>' + price + '</td>' +              //precio (puede estar vacio)
+                                //botones editar y eliminar, le pasamos los datos del objeto
+                                '<td>' +
+                                    '<button onclick="prepararEdicion(\'' + objeto.id + '\',\'' + objeto.name + '\',\'' + color + '\',\'' + price + '\')">Editar</button>' +
+                                    '<button onclick="eliminarObjeto(\'' + objeto.id + '\')">Eliminar</button>' +
+                                '</td>' +
+                            '</tr>'
+
+                            //agregamos la fila al tbody de la tabla
+                            tbody.innerHTML += fila
+                        })
+                    }
+                }
+
+                //enviamos la solicitud a la API
+                request.send()
+            }
+
+            //funcion para agregar un nuevo objeto enviando los datos del formulario a la API
+            function agregarObjeto(){
+
+                //leemos el valor de cada input buscandolo por su atributo name
+                var name = document.getElementsByName('name')[0].value
+                var color = document.getElementsByName('color')[0].value
+                var price = document.getElementsByName('price')[0].value
+
+                //creamos el objeto con la estructura que espera la API
+                //name va directo y color y price van dentro de data
+                var nuevoObjeto = {
+                    name: name,
+                    data: {
+                        color: color,
+                        price: price
+                    }
+                }
+
+                var request = new XMLHttpRequest() //creacion de solicitud HTTP
+
+                //configuramos la solicitud: metodo POST y la URL base
+                request.open('POST', url)
+
+                //le indicamos a la API que vamos a enviar datos en formato JSON
+                request.setRequestHeader('Content-Type', 'application/json')
+
+                //esta funcion se ejecuta cuando la solicitud termina
+                request.onreadystatechange = function(){
+
+                    //si la solicitud termino y fue exitosa
+                    if(request.readyState == 4 && request.status == 200){
+
+                        //recargamos la tabla para que aparezca el nuevo objeto
+                        cargarObjetos()
+                    }
+                }
+
+                //enviamos la solicitud convirtiendo el objeto a formato JSON
+                request.send(JSON.stringify(nuevoObjeto))
+            }
+
+            //funcion que se llama al clickear Editar en una fila
+            //recibe los datos del objeto y los carga en el formulario de edicion
+            function prepararEdicion(id, name, color, price){
+
+                //mostramos el formulario de edicion que estaba oculto
+                document.getElementById('formulario-editar').style.display = 'block'
+
+                //llenamos cada input del formulario con los datos del objeto seleccionado
+                document.getElementsByName('idEditar')[0].value = id
+                document.getElementsByName('nameEditar')[0].value = name
+                document.getElementsByName('colorEditar')[0].value = color
+                document.getElementsByName('priceEditar')[0].value = price
+            }
+
+            //funcion que envia los datos actualizados del formulario de edicion a la API
+            function actualizarObjeto(){
+
+                //leemos el ID del objeto que se esta editando desde el input oculto
+                var id = document.getElementsByName('idEditar')[0].value
+
+                //leemos los valores actualizados de cada input
+                var name = document.getElementsByName('nameEditar')[0].value
+                var color = document.getElementsByName('colorEditar')[0].value
+                var price = document.getElementsByName('priceEditar')[0].value
+
+                //creamos el objeto actualizado con la estructura que espera la API
+                var objetoActualizado = {
+                    name: name,
+                    data: {
+                        color: color,
+                        price: price
+                    }
+                }
+
+                var request = new XMLHttpRequest() //creacion de solicitud HTTP
+
+                //configuramos la solicitud: metodo PUT y la URL con el ID del objeto a actualizar
+                request.open('PUT', url + '/' + id)
+
+                //le indicamos a la API que vamos a enviar datos en formato JSON
+                request.setRequestHeader('Content-Type', 'application/json')
+
+                //esta funcion se ejecuta cuando la solicitud termina
+                request.onreadystatechange = function(){
+
+                    if(request.readyState == 4 && request.status == 200){
+
+                        //ocultamos el formulario de edicion nuevamente
+                        document.getElementById('formulario-editar').style.display = 'none'
+
+                        //recargamos la tabla para mostrar los datos actualizados
+                        cargarObjetos()
+                    }
+                }
+
+                //enviamos los datos actualizados en formato JSON
+                request.send(JSON.stringify(objetoActualizado))
+            }
+
+            //funcion para eliminar un objeto por su id
+            function eliminarObjeto(id){
+
+                var request = new XMLHttpRequest() //creacion de solicitud HTTP
+
+                //configuramos la solicitud: metodo DELETE y la URL con el ID del objeto a eliminar
+                request.open('DELETE', url + '/' + id)
+
+                //esta funcion se ejecuta cuando la solicitud termina
+                request.onreadystatechange = function(){
+
+                    if(request.readyState == 4 && request.status == 200){
+
+                        //recargamos la tabla para que desaparezca el objeto eliminado
+                        cargarObjetos()
+                    }
+                }
+
+                //enviamos la solicitud sin cuerpo porque solo necesitamos el ID en la URL
+                request.send()
+            }
+
+            //llamamos a la funcion para que cargue los objetos cuando abre la pagina
+            cargarObjetos()
+        </script>
+    </body>
+</html>
