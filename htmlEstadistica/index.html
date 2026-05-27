@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    
+    <meta charset="UTF-8" />
+     <title>TP2 - Estadística</title>
+
+     <!-- Bootstrap para los estilos y los tabs -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+       
+    
+</head>
+    <body>
+        <div class="container mt-4">
+
+            <h1>Estadistica y Probabilidades</h1>
+            <p class="text-muted">Trabajo Práctico N°2 Ramiro Ezequiel Camelino</p>
+
+            <!-- Botones de las pestañas, cada boton apunta a su div con data-bs-target -->
+             <ul class="nav nav-tabs" id="miTab">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#poblacion">
+                        Población Completa
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#frecuencia">
+                        Tablas de Frecuencia
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#estadisticos">
+                        Estadísticos
+                    </button>
+                </li>
+             </ul>
+
+            <!-- Contenido de cada pestaña, el id tiene que coincidir con el data-bs-target del botón -->
+            <div class="tab-content mt-3"> 
+                <!-- show active hace que esta pestaña sea la que se ve al abrir la pagina -->
+                <div class="tab-pane fade show active" id="poblacion">
+                    <p>Aca va la tabla de poblaciones.</p>
+                </div>
+                <div class="tab-pane fade" id="frecuencia">
+                    <p>Aca van las tablas de frecuencia.</p>
+                </div>
+                <div class="tab-pane fade" id="estadisticos">
+                    <p>Aca van los estadisticos.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- JS de Bootstrap, necesario para que los tabs funcionen -->
+         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+         <script>
+            // Pedimos los datos a la API con fetch
+            fetch("https://apidemo.geoeducacion.com.ar/api/testing/encuesta/1")
+            .then(function(respuesta) {
+                // convertimos la respuesta a json para poder usarla
+                return respuesta.json();
+            })
+            .then(function(json) {
+
+                // Todo el código va acá adentro para tener acceso a los datos
+                var datos = json.data;
+
+                // --- POBLACIÓN COMPLETA ---
+
+                // Ponemos la tabla dentro del div de la pestaña
+                var contenedor = document.getElementById("poblacion");
+                contenedor.innerHTML = `
+                    <table class="table table-bordered mt-3">
+                        <thead>
+                            <tr>
+                                <th>Nombre y Apellido</th>
+                                <th>Edad</th>
+                                <th>Curso</th>
+                                <th>Nivel Educativo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filas">
+                        </tbody>
+                    </table>
+                `;
+
+                var tbody = document.getElementById("filas");
+
+                // Por cada estudiante agregamos una fila a la tabla
+                datos.forEach(function(estudiante) {
+                    var fila = "<tr>";
+                    fila += "<td>" + estudiante.nombre + " " + estudiante.apellido + "</td>";
+                    fila += "<td>" + estudiante.Edad + "</td>";
+                    fila += "<td>" + estudiante.curso + "</td>";
+                    fila += "<td>" + estudiante.nivel + "</td>"; 
+                    fila += "</tr>";
+                    tbody.innerHTML += fila;
+                });
+
+                // --- TABLAS DE FRECUENCIA: NIVELES ---
+
+                // Contamos cuántos estudiantes hay por nivel
+                // si el nivel no existe en el objeto lo creamos, sino le sumamos 1
+                var conteoNiveles = {};
+
+                datos.forEach(function(estudiante) {
+                    var nivel = estudiante.nivel;
+                    if (conteoNiveles[nivel] == undefined) {
+                        conteoNiveles[nivel] = 1;
+                    } else {
+                        conteoNiveles[nivel] = conteoNiveles[nivel] + 1;
+                    }
+                });
+
+                var total = datos.length;
+                var contenedorFrecuencia = document.getElementById("frecuencia");
+
+                contenedorFrecuencia.innerHTML = `
+                    <h5>Niveles Educativos</h5>
+                    <table class="table table-bordered mt-3">
+                        <thead>
+                            <tr>
+                                <th>Nivel</th>
+                                <th>Frecuencia Absoluta</th>
+                                <th>Frecuencia Acumulada</th>
+                                <th>Frecuencia Relativa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filasNiveles">
+                        </tbody>
+                    </table>
+                `;
+
+                // Recorremos el objeto con los conteos y armamos las filas
+                // acumulada arranca en 0 y va sumando en cada vuelta
+                var acumulada = 0;
+                var tbodyNiveles = document.getElementById("filasNiveles");
+
+                for (var nivel in conteoNiveles) {
+                    var absoluta = conteoNiveles[nivel];
+                    acumulada = acumulada + absoluta;
+                    var relativa = ((absoluta / total) * 100).toFixed(2) + "%";
+
+                    var fila = "<tr>";
+                    fila += "<td>" + nivel + "</td>";
+                    fila += "<td>" + absoluta + "</td>";
+                    fila += "<td>" + acumulada + "</td>";
+                    fila += "<td>" + relativa + "</td>";
+                    fila += "</tr>";
+
+                    tbodyNiveles.innerHTML += fila;
+                }
+
+                // Filtramos solo los estudiantes de secundario
+                var soloSecundario = [];
+
+                datos.forEach(function(estudiante){
+                    if(estudiante.nivel == "Secundario"){
+                        soloSecundario.push(estudiante);
+                    }
+                });
+
+                // Contamos cuantos hay por curso dentro de los estudiantes de secundario
+                var conteoCursos = {};
+
+                soloSecundario.forEach(function(estudiante){
+                    var curso = estudiante.curso;
+                    if (conteoCursos[curso] == undefined) {
+                        conteoCursos[curso] = 1;
+                    } else {
+                        conteoCursos[curso] = conteoCursos[curso] + 1;
+                    }
+                });
+
+                // Agregamos la segunda tabla al mismo contenedor de frecuencia
+                // usamos += para no borrar la tabla de niveles que ya esta
+                contenedorFrecuencia.innerHTML += `
+                    <h5 class="mt-4">Cursos del Nivel Secundario</h5>
+                    <table class="table table-bordered mt-3">
+                        <thead>
+                            <tr>
+                                <th>Curso</th>
+                                <th>Frecuencia Absoluta</th>
+                                <th>Frecuencia Acumulada</th>
+                                <th>Frecuencia Relativa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filasCursos">
+                        </tbody>
+                    </table>
+                `;
+
+                // aca el total es solo de secundario, no de todos los estudiantes
+                var totalSecundario = soloSecundario.length;
+                var acumuladaCursos= 0;
+                var tbodyCursos = document.getElementById("filasCursos");
+
+                for(var curso in conteoCursos){ 
+                    var absoluta = conteoCursos[curso];
+                    acumuladaCursos = acumuladaCursos + absoluta;
+                    var relativa = ((absoluta / totalSecundario) * 100).toFixed(2) + "%";
+
+                    var fila = "<tr>";
+                    fila += "<td>" + curso + "</td>";
+                    fila += "<td>" + absoluta + "</td>";
+                    fila += "<td>" + acumuladaCursos + "</td>";
+                    fila += "<td>" + relativa + "</td>";
+                    fila += "</tr>";
+
+                    tbodyCursos.innerHTML += fila;
+                }
+
+                // saco solo las edades en un array para poder calcular los estadísticos después
+                var edades = [];
+
+                datos.forEach(function(estudiante){
+                    edades.push(estudiante.Edad);
+                });
+
+                // ordenamos las edades de maenor a mayor, es necesario para la mediana y los cuartiles
+                edades.sort(function(a,b){return a-b;   })
+
+                console.log(edades);
+
+                var n = edades.length;
+
+                // media: sumamos toas las edades y dividimos por la cantidad que hay
+                var suma =0;
+                edades.forEach(function(edad){
+                    suma = suma + edad;
+                });
+
+                var media = (suma/n).toFixed(2);
+
+                // mediana: el valor del medio del array ya ordenado, si es par se promedian los dos del medio
+                var mediana;
+                if(n % 2 == 0){
+                    mediana = ((edades[n/2-1] + edades[n/2])/2).toFixed(2);
+                } else{
+                    mediana= edades[Math.floor(n/2)].toFixed(2);
+                }
+                
+                // maximo y minimo: como el array esta ordenado, son el primeor y el ultimo valor del array
+                var minimo = edades[0];
+                var maximo = edades[n-1];
+
+                // q1 y q2 el valor en el 25% y 50% del array ordenado
+                var q1 = edades[Math.floor(n* 0.25)];
+                var q2 = edades[Math.floor(n* 0.5)];
+
+                // desvio estandar: que mide que tan dispersos estan los datos con respecto a la media
+                // usamos Math.pow para elevar al cuadrado y Math.sqrt para la raiz
+                var sumaDiferencias = 0;
+                edades.forEach(function(edad){
+                    sumaDiferencias = sumaDiferencias + Math.pow(edad - media, 2);
+                });
+
+                var desvioEstandar = Math.sqrt(sumaDiferencias/n).toFixed(2);
+
+                console.log("Media:", media, "Mediana:", mediana, "Min:", minimo, "Max:", maximo);
+
+                // busamos el div de la pestaña estadisticos y le agregamos el contenido con los estadísticos calculados
+                var contenedorEstadisticos = document.getElementById("estadisticos");
+
+                // armo la tabla con todos los valores calculoados
+                // uso ${} para poner las variables directo en el html sin concatenar con +
+                contenedorEstadisticos.innerHTML = `
+                 <table class="table table-bordered mt-3">
+                    <thead>
+                        <tr>
+                            <th>Estadístico</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Media</td><td>${media}</td></tr>
+                        <tr><td>Mediana</td><td>${mediana}</td></tr>
+                        <tr><td>Valor Mínimo</td><td>${minimo}</td></tr>
+                        <tr><td>Valor Máximo</td><td>${maximo}</td></tr>
+                        <tr><td>Q1</td><td>${q1}</td></tr>
+                        <tr><td>Q2</td><td>${q2}</td></tr>
+                        <tr><td>Desvío Estándar</td><td>${desvioEstandar}</td></tr>
+                    </tbody>
+                    </table>
+                `;
+
+            });
+
+         </script>
+    </body>
+</html>
